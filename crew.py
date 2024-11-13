@@ -1,102 +1,150 @@
-
 from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
+from crewai_tools import SerperDevTool, WebScrapingTool
 import os
 from dotenv import load_dotenv, find_dotenv
 
-
+# Carrega as variáveis de ambiente
 def load_env():
     _ = load_dotenv(find_dotenv())
 
-
+# Função para obter a chave da API do modelo
 def get_gemini_api_key():
     load_env()
     gemini_api_key = os.getenv("GEMINI_API_KEY")
     return gemini_api_key
 
-
+# Configuração do modelo de linguagem
 LLModel = LLM(
-    model="gemini/gemini-1.5-pro",  # Modelo de linguagem configurado
-    temperature=0.5,                 # Controla a aleatoriedade das respostas
-    api_key=get_gemini_api_key(),    # Chave de API para autenticação
+    model="gemini/gemini-1.5-pro",
+    temperature=0.5,
+    api_key=get_gemini_api_key(),
 )
 
-# Ferramentas fictícias de busca e scraping
-from crewai_tools import SerperDevTool, WebScraperTool  # Exemplo de ferramentas
-
-# Classe principal do sistema de multiagentes
 @CrewBase
-class SistemaMultiAgentesCrew():
+class SistemaMultiAgentesCrew:
+    """Sistema de Multi-Agentes aprimorado"""
 
-    # Configuração de variáveis de backstory para os agentes
-    agents_config = {
-        'researcher': {
-            'description': 'Pesquisador Cético que examina rigorosamente a confiabilidade das fontes.',
-            'objective': 'Realizar buscas detalhadas e verificar a credibilidade das fontes.',
-        },
-        'reporting_analyst': {
-            'description': 'Analista Estratégico, prioriza dados para recomendações de alto impacto.',
-            'objective': 'Gerar relatórios orientados para decisões estratégicas.',
-        },
-        'fact_checker': {
-            'description': 'Verificador de Fatos Imparcial, dedicado a checar a veracidade de cada informação.',
-            'objective': 'Identificar e confirmar a autenticidade das informações coletadas.',
+    def __init__(self):
+        # Configurações dos agentes
+        self.agents_config = {
+            'researcher': {
+                "name": "Investigador da Web",
+                "description": "Especialista em busca de dados e coleta de informações detalhadas.",
+                "role": "Pesquisador",
+                "goal": "Realizar buscas e coleta de dados da web para análise detalhada.",
+                "backstory": "Veterano em investigações online com foco em coleta de informações e técnicas de scraping."
+            },
+            'fact_checker': {
+                "name": "Verificador de Fatos",
+                "description": "Especialista em validação e verificação de informações.",
+                "role": "Verificador de Fatos",
+                "goal": "Confirmar a precisão das informações coletadas pelo pesquisador.",
+                "backstory": "Profissional com anos de experiência em checagem de fatos e análise crítica de dados."
+            },
+            'reporting_analyst': {
+                "name": "Analista de Relatórios",
+                "description": "Responsável por compilar os dados em relatórios compreensíveis.",
+                "role": "Analista de Relatórios",
+                "goal": "Compilar informações em relatórios finais claros e detalhados.",
+                "backstory": "Analista de dados com expertise em transformar dados complexos em relatórios acessíveis."
+            }
         }
-    }
+        
+        self.tasks_config = {
+            'research_task': {
+                "name": "Tarefa de Pesquisa",
+                "description": "Realizar busca detalhada sobre o tópico especificado.",
+                "expected_output": "Informações organizadas e relevantes sobre o tópico pesquisado."
+            },
+            'reporting_task': {
+                "name": "Tarefa de Relatório",
+                "description": "Organizar as informações pesquisadas em um relatório final.",
+                "expected_output": "Relatório final completo com análise detalhada das informações coletadas."
+            }
+        }
 
-    # Definição do agente pesquisador com ferramentas de busca e scraping
+    # Agente de pesquisa com ferramentas de busca e scraping
     @agent
     def researcher(self) -> Agent:
         return Agent(
-            config=self.agents_config['researcher'],    # Usa a configuração do pesquisador
-            tools=[SerperDevTool(), WebScraperTool()],  # Ferramentas adicionadas para busca e scraping
-            verbose=True,                               # Imprime logs detalhados para debug
-            llm=LLModel                                 # Modelo de linguagem para auxiliar o agente
+            name=self.agents_config['researcher']["name"],
+            description=self.agents_config['researcher']["description"],
+            role=self.agents_config['researcher']["role"],
+            goal=self.agents_config['researcher']["goal"],
+            backstory=self.agents_config['researcher']["backstory"],
+            tools=[SerperDevTool(), WebScrapingTool()],
+            verbose=True,
+            llm=LLModel
         )
 
-    # Definição do agente analista de relatórios
-    @agent
-    def reporting_analyst(self) -> Agent:
-        return Agent(
-            config=self.agents_config['reporting_analyst'],  # Configuração do analista
-            verbose=True,                                     # Logs detalhados
-            llm=LLModel                                       # Modelo de linguagem
-        )
-
-    # Definição do agente de checagem de fatos para verificação de informações
+    # Agente de checagem de fatos
     @agent
     def fact_checker(self) -> Agent:
         return Agent(
-            config=self.agents_config['fact_checker'],  # Configuração do checador de fatos
-            tools=[SerperDevTool()],                    # Ferramenta para checagem de fatos (exemplo)
-            verbose=True,                               # Logs detalhados
-            llm=LLModel                                 # Modelo de linguagem
+            name=self.agents_config['fact_checker']["name"],
+            description=self.agents_config['fact_checker']["description"],
+            role=self.agents_config['fact_checker']["role"],
+            goal=self.agents_config['fact_checker']["goal"],
+            backstory=self.agents_config['fact_checker']["backstory"],
+            tools=[SerperDevTool()],  # Usa ferramenta de busca para auxiliar na verificação
+            verbose=True,
+            llm=LLModel
         )
 
-    # Definição da tarefa de pesquisa para o agente pesquisador
+    # Agente de relatório
+    @agent
+    def reporting_analyst(self) -> Agent:
+        return Agent(
+            name=self.agents_config['reporting_analyst']["name"],
+            description=self.agents_config['reporting_analyst']["description"],
+            role=self.agents_config['reporting_analyst']["role"],
+            goal=self.agents_config['reporting_analyst']["goal"],
+            backstory=self.agents_config['reporting_analyst']["backstory"],
+            verbose=True,
+            llm=LLModel
+        )
+
+    # Tarefa de pesquisa
     @task
     def research_task(self) -> Task:
         return Task(
-            config={'name': 'Pesquisa de informações relevantes'},
-            verbose=True  # Logs detalhados
+            name=self.tasks_config['research_task']["name"],
+            description=self.tasks_config['research_task']["description"],
+            expected_output=self.tasks_config['research_task']["expected_output"],
+            verbose=True
         )
 
-    # Definição da tarefa de relatório, onde os dados são processados para um output final
+    # Tarefa de relatório
     @task
     def reporting_task(self) -> Task:
         return Task(
-            config={'name': 'Geração de relatório final com insights'},
-            output_file='results/report.md',  # Define o arquivo de saída do relatório
-            verbose=True                      # Logs detalhados
+            name=self.tasks_config['reporting_task']["name"],
+            description=self.tasks_config['reporting_task']["description"],
+            expected_output=self.tasks_config['reporting_task']["expected_output"],
+            output_file='results/report.md',
+            verbose=True
         )
 
-    # Criação do grupo de agentes (crew) e tarefas para definir o fluxo do sistema
+    # Configuração do Crew
     @crew
     def crew(self) -> Crew:
-        """Cria o crew do SistemaMultiAgentes"""
         return Crew(
-            agents=self.agents,                # Agentes definidos com @agent decorator
-            tasks=self.tasks,                  # Tarefas definidas com @task decorator
-            process=Process.sequential,        # Define o processo como sequencial
-            verbose=True                       # Logs detalhados do processo
+            agents={
+                "researcher": self.researcher(),
+                "fact_checker": self.fact_checker(),
+                "reporting_analyst": self.reporting_analyst()
+            },
+            tasks={
+                "research_task": self.research_task(),
+                "reporting_task": self.reporting_task()
+            },
+            process=Process.sequential,
+            verbose=True
         )
+
+# Execução do sistema de multi-agentes
+if __name__ == "__main__":
+    sistema_crew = SistemaMultiAgentesCrew()
+    crew_instance = sistema_crew.crew()
+    crew_instance.run()
